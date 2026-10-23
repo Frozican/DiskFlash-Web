@@ -51,7 +51,7 @@
         <div class="disk-warning hidden" id="diskInfo"></div>
         <div class="settings-grid settings-spaced">
           <label class="field"><span>Block size</span><select id="blockSize"><option value="1048576">1 MiB</option><option value="4194304" selected>4 MiB (default)</option><option value="8388608">8 MiB</option><option value="16777216">16 MiB</option></select><small>Controls streaming write chunks.</small></label>
-          <div class="field"><span>Image verification</span><button class="secondary-button" id="hashBtn" type="button">Calculate SHA-256</button><small id="hashStatus">Optional; very large files may take a while.</small></div>
+          <div class="field"><span>Source checksum (optional)</span><button class="secondary-button" id="hashBtn" type="button">Calculate source SHA-256</button><small id="hashStatus">The helper always verifies the written disk after flashing.</small></div>
         </div>
         <div class="hash-result hidden" id="hashResult"><span>SHA-256</span><code id="hashValue"></code><button class="text-button" id="copyHash" type="button">Copy</button></div>
       </section>
