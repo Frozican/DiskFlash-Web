@@ -7,7 +7,8 @@ An unofficial static HTML/CSS/JavaScript disk-image writer inspired by [Cametend
 - Select or drag-and-drop a disk image
 - Connect to the local helper to list physical disks
 - Stream an image to a selected disk in chunks without loading the whole image into RAM
-- Image size validation, optional SHA-256, progress indicator and explicit destructive confirmation
+- Image size validation, optional source SHA-256, live write speed/ETA, separate read-back verification progress, and explicit destructive confirmation
+- Automatic post-write read-back SHA-256 verification, streamed in blocks without loading the full image into RAM
 - Helper blocks identified boot/system disks, read-only disks, mounted Linux disks, and images larger than the target
 
 ## Important safety notes
@@ -15,7 +16,7 @@ An unofficial static HTML/CSS/JavaScript disk-image writer inspired by [Cametend
 
 GitHub Pages cannot directly access arbitrary physical disks. Actual writing requires the included local helper, which listens only on `127.0.0.1:8765`. It supports Linux and Windows; macOS is not supported yet. Windows raw-disk access normally requires an elevated PowerShell session. On Linux, run with appropriate device permissions and unmount all partitions on the target first.
 
-The helper refuses disks marked as boot/system by the OS, read-only disks, mounted Linux disks, and oversized images. OS device reporting can be imperfect; these checks are not a substitute for checking the target yourself. Only run the helper on a computer you trust. It has no authentication and is intended to run locally only; do not expose its port to your network.
+The helper refuses disks marked as boot/system by the OS, read-only disks, mounted Linux disks, and oversized images. After writing, it reads the written image back in blocks and compares SHA-256 hashes. A verification failure is reported as an error; do not assume the disk is usable. OS device reporting can be imperfect; these checks are not a substitute for checking the target yourself. Only run the helper on a computer you trust. It has no authentication and is intended to run locally only; do not expose its port to your network.
 
 ## Use
 1. Download `flash_helper.py` from this repository to the computer containing the target disk.
