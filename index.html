@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#10131a">
-  <title>cflash web — Image writer</title>
+  <title>cflash web — Disk image writer</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,20 +14,25 @@
         <span class="brand-mark">c<span>f</span></span>
         <span><strong>cflash</strong><small>WEB EDITION</small></span>
       </a>
-      <span class="local-pill"><i></i> Runs locally in your browser</span>
+      <span class="local-pill"><i></i> Browser + local helper</span>
     </header>
     <main>
       <section class="hero">
         <div class="eyebrow"><span class="eyebrow-line"></span> SIMPLE. SAFE. TRANSPARENT.</div>
         <h1>Flash drives.<br><span>Without the guesswork.</span></h1>
-        <p>A browser-based companion inspired by cflash-git. Prepare an image, review the write settings, and generate a clear flash plan.</p>
+        <p>Prepare an image, select a physical disk, and write it through an explicitly installed local helper. Supports USB drives and hard drives on Linux and Windows.</p>
       </section>
       <div class="notice" role="note">
         <span class="notice-icon">!</span>
-        <div><strong>Browser limitation</strong><p>This web app cannot directly overwrite ordinary USB drives like Linux <code>dd</code>. It can inspect your image and prepare the workflow, but it will never pretend a drive was flashed.</p></div>
+        <div><strong>Disk writes permanently erase data</strong><p>GitHub Pages alone cannot write to ordinary disks. For real flashing, download and run the local helper on your computer. It refuses boot/system disks, read-only disks, mounted Linux disks, and images larger than the target. Always double-check the selected disk.</p></div>
       </div>
       <section class="workspace">
-        <div class="section-heading"><span class="step">01</span><div><h2>Choose an image</h2><p>Select the disk image you want to write.</p></div></div>
+        <div class="section-heading"><span class="step">01</span><div><h2>Connect the local helper</h2><p>Run <code>python flash_helper.py</code> on your computer, then connect below.</p></div></div>
+        <div class="helper-row"><span class="status-dot" id="helperDot"></span><div class="helper-copy"><strong id="helperStatus">Helper not connected</strong><small id="helperDetail">The helper listens only on your own computer at 127.0.0.1:8765.</small></div><button class="secondary-button" id="connectBtn" type="button">Connect / refresh disks</button></div>
+        <p class="helper-note">Windows: open PowerShell as Administrator before starting the helper. Linux: run it with permissions to access the target disk. Only run scripts you have inspected and trust.</p>
+      </section>
+      <section class="workspace">
+        <div class="section-heading"><span class="step">02</span><div><h2>Choose an image</h2><p>Select the disk image you want to write.</p></div></div>
         <label class="dropzone" id="dropzone" for="imageFile">
           <input id="imageFile" type="file" accept=".iso,.img,.bin,.raw,.gz,.xz,.zip,application/octet-stream">
           <span class="upload-icon">↑</span>
@@ -41,34 +46,31 @@
         </div>
       </section>
       <section class="workspace">
-        <div class="section-heading"><span class="step">02</span><div><h2>Write settings</h2><p>Review the options for your intended flash.</p></div></div>
-        <div class="settings-grid">
-          <label class="field"><span>Target drive</span><select id="target"><option value="">Select a drive on your computer…</option><option value="not-available">Drive selection unavailable in this browser</option></select><small>Web browsers cannot list ordinary block devices.</small></label>
-          <label class="field"><span>Block size</span><select id="blockSize"><option value="1M">1M</option><option value="4M" selected>4M (default)</option><option value="8M">8M</option><option value="16M">16M</option></select><small>Used in the generated flash plan.</small></label>
-          <label class="field"><span>Write option (oflag)</span><select id="oflag"><option value="direct" selected>direct (default)</option><option value="sync">sync</option><option value="direct,sync">direct,sync</option><option value="none">none</option></select><small>Matches common dd-style options.</small></label>
-          <div class="field"><span>Image verification</span><button class="secondary-button" id="hashBtn" type="button">Calculate SHA-256</button><small id="hashStatus">Optional; large files may take a while.</small></div>
+        <div class="section-heading"><span class="step">03</span><div><h2>Choose the physical disk</h2><p>Choose the exact device, not a partition or drive letter.</p></div></div>
+        <label class="field"><span>Target disk</span><select id="target"><option value="">Connect helper to list disks…</option></select><small id="targetHelp">Disk names, sizes and identifiers come from your computer's local helper.</small></label>
+        <div class="disk-warning hidden" id="diskInfo"></div>
+        <div class="settings-grid settings-spaced">
+          <label class="field"><span>Block size</span><select id="blockSize"><option value="1048576">1 MiB</option><option value="4194304" selected>4 MiB (default)</option><option value="8388608">8 MiB</option><option value="16777216">16 MiB</option></select><small>Controls streaming write chunks.</small></label>
+          <div class="field"><span>Image verification</span><button class="secondary-button" id="hashBtn" type="button">Calculate SHA-256</button><small id="hashStatus">Optional; very large files may take a while.</small></div>
         </div>
         <div class="hash-result hidden" id="hashResult"><span>SHA-256</span><code id="hashValue"></code><button class="text-button" id="copyHash" type="button">Copy</button></div>
       </section>
       <section class="workspace">
-        <div class="section-heading"><span class="step">03</span><div><h2>Review before writing</h2><p>Check the image and settings before you use a local flashing tool.</p></div></div>
+        <div class="section-heading"><span class="step">04</span><div><h2>Review and flash</h2><p>Check the source and target carefully. The selected disk will be overwritten.</p></div></div>
         <div class="summary">
           <div class="summary-row"><span>Image</span><strong id="summaryImage">No image selected</strong></div>
           <div class="summary-row"><span>Image size</span><strong id="summarySize">—</strong></div>
-          <div class="summary-row"><span>Block size</span><strong id="summaryBlock">4M</strong></div>
-          <div class="summary-row"><span>Write option</span><strong id="summaryFlag">direct</strong></div>
+          <div class="summary-row"><span>Target disk</span><strong id="summaryTarget">No disk selected</strong></div>
+          <div class="summary-row"><span>Target capacity</span><strong id="summaryCapacity">—</strong></div>
+          <div class="summary-row"><span>Block size</span><strong id="summaryBlock">4 MiB</strong></div>
         </div>
-        <label class="check-row"><input type="checkbox" id="confirm"><span>I understand that flashing an image can permanently erase data on the selected drive.</span></label>
-        <button class="primary-button" id="planBtn" disabled>Prepare flash plan <span>↗</span></button>
-        <p class="button-help" id="buttonHelp">Choose an image and acknowledge the data-loss warning to continue.</p>
-        <div id="plan" class="plan hidden" aria-live="polite">
-          <div class="plan-head"><span class="success-icon">✓</span><div><strong>Flash plan prepared</strong><p>No drive has been modified.</p></div></div>
-          <label class="field"><span>Plan / command reference</span><textarea id="planText" rows="4" readonly></textarea></label>
-          <div class="plan-actions"><button class="secondary-button" id="copyPlan" type="button">Copy plan</button><button class="secondary-button" id="downloadPlan" type="button">Download plan (.txt)</button></div>
-          <p class="small-warning">Before running any command, verify the target device identifier carefully. A wrong target can destroy data or make a system unbootable.</p>
-        </div>
+        <label class="check-row"><input type="checkbox" id="confirm"><span>I understand this permanently overwrites the selected physical disk and can destroy all data on it.</span></label>
+        <button class="primary-button" id="flashBtn" disabled>Write image to disk <span>↗</span></button>
+        <p class="button-help" id="buttonHelp">Connect the helper, choose an image and target disk, then confirm the data-loss warning.</p>
+        <div class="progress-wrap hidden" id="progressWrap"><div class="progress-track"><div id="progressBar"></div></div><div class="progress-caption"><span id="progressStatus">Preparing…</span><strong id="progressPercent">0%</strong></div></div>
+        <div id="result" class="result hidden" aria-live="polite"></div>
       </section>
-      <footer><span>cflash web · Unofficial browser companion</span><a href="https://github.com/Cametendo/cflash-git" target="_blank" rel="noreferrer">Based on the idea of cflash-git ↗</a></footer>
+      <footer><span>cflash web · Unofficial independent implementation</span><a href="https://github.com/Cametendo/cflash-git" target="_blank" rel="noreferrer">Inspired by cflash-git ↗</a></footer>
     </main>
   </div>
   <script src="app.js"></script>
