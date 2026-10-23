@@ -73,6 +73,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/api/status":
             return self.reply(200, {"ok": True, "platform": platform.system()})
+        if self.path == "/api/progress":
+            return self.reply(200, get_progress())
         if self.path == "/api/drives":
             try: return self.reply(200, {"drives": list_drives()})
             except Exception as e: return self.reply(500, {"error": str(e)})
@@ -109,16 +111,42 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 f = open(target, "r+b", buffering=0)
             else:
                 f = open(target, "r+b", buffering=0)
+            started = time.monotonic()
+            update_progress(stage="writing", written=0, verified=0, total=size, speed=0, eta=None, error=None)
+            incoming_hash = hashlib.sha256()
             written = 0
             with f:
                 while written < size:
                     chunk = self.rfile.read(min(block, size - written))
                     if not chunk: raise RuntimeError("Upload ended early; disk may contain a partial image")
-                    f.write(chunk); written += len(chunk)
+                    incoming_hash.update(chunk)
+                    view = memoryview(chunk)
+                    while view:
+                        count = f.write(view)
+                        if not count: raise RuntimeError("Disk write returned zero bytes")
+                        view = view[count:]
+                        written += count
+                    elapsed = max(time.monotonic() - started, 0.001)
+                    speed = written / elapsed
+                    update_progress(stage="writing", written=written, verified=0, total=size, speed=speed, eta=max(0, size-written) / speed if speed else None)
                 f.flush(); os.fsync(f.fileno())
-            return self.reply(200, {"ok": True, "written": written, "message": "Image write completed. Safely eject the disk before unplugging."})
+                source_digest = incoming_hash.hexdigest()
+                update_progress(stage="verifying", written=written, verified=0, total=size, speed=0, eta=None)
+                f.seek(0)
+                verified = 0
+                readback_hash = hashlib.sha256()
+                while verified < size:
+                    chunk = f.read(min(block, size - verified))
+                    if not chunk: raise RuntimeError("Read-back verification ended early")
+                    readback_hash.update(chunk); verified += len(chunk)
+                    update_progress(stage="verifying", written=written, verified=verified, total=size, speed=0, eta=None)
+                if readback_hash.hexdigest() != source_digest: raise RuntimeError("Verification failed: disk contents do not match the image")
+            elapsed = max(time.monotonic() - started, 0.001)
+            update_progress(stage="done", written=written, verified=size, total=size, speed=written / elapsed, eta=0, error=None)
+            return self.reply(200, {"ok": True, "written": written, "verified": size, "sha256": source_digest, "write_seconds": round(elapsed, 2), "average_bytes_per_second": round(written / elapsed), "message": "Image written and read-back SHA-256 verified. Safely eject the disk before unplugging."})
         except Exception as e:
-            return self.reply(500, {"error": str(e), "warning": "The target may have been partially overwritten. Do not unplug it until the system is stable."})
+            update_progress(stage="error", error=str(e))
+            return self.reply(500, {"error": str(e), "warning": "The target may be partially overwritten or failed verification. Do not assume it is usable."})
 
 def main():
     if platform.system() not in ("Linux", "Windows"):
