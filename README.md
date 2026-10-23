@@ -1,4 +1,4 @@
-# cflash web
+# DiskFlash Web
 
 A browser-based disk-image writer with a small local Python helper. The interface runs as a static website; the helper is required because browsers cannot directly write to physical disks. Inspired by the workflow of [Cametendo/cflash-git](https://github.com/Cametendo/cflash-git), but implemented independently.
 
