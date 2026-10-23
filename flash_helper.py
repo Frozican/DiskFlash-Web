@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 """Local cflash helper. Supports Linux and Windows; run only on a computer you trust."""
-import http.server, json, os, platform, shutil, subprocess, sys, threading, urllib.parse
+import hashlib, http.server, json, os, platform, shutil, subprocess, sys, threading, time, urllib.parse
 
 HOST, PORT = "127.0.0.1", 8765
 CHUNK = 4 * 1024 * 1024
 ALLOWED_ORIGINS = {"https://frozican.github.io", "http://localhost:8000", "http://127.0.0.1:8000"}
+PROGRESS = {"stage": "idle", "written": 0, "verified": 0, "total": 0, "speed": 0, "eta": None, "error": None}
+PROGRESS_LOCK = threading.Lock()
+def update_progress(**values):
+    with PROGRESS_LOCK:
+        PROGRESS.update(values)
+def get_progress():
+    with PROGRESS_LOCK:
+        return dict(PROGRESS)
 
 def run_json(command):
     p = subprocess.run(command, capture_output=True, text=True, check=True)
