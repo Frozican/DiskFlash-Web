@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10131a">
+  <title>cflash web — Image writer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="cflash web home">
+        <span class="brand-mark">c<span>f</span></span>
+        <span><strong>cflash</strong><small>WEB EDITION</small></span>
+      </a>
+      <span class="local-pill"><i></i> Runs locally in your browser</span>
+    </header>
+    <main>
+      <section class="hero">
+        <div class="eyebrow"><span class="eyebrow-line"></span> SIMPLE. SAFE. TRANSPARENT.</div>
+        <h1>Flash drives.<br><span>Without the guesswork.</span></h1>
+        <p>A browser-based companion inspired by cflash-git. Prepare an image, review the write settings, and generate a clear flash plan.</p>
+      </section>
+      <div class="notice" role="note">
+        <span class="notice-icon">!</span>
+        <div><strong>Browser limitation</strong><p>This web app cannot directly overwrite ordinary USB drives like Linux <code>dd</code>. It can inspect your image and prepare the workflow, but it will never pretend a drive was flashed.</p></div>
+      </div>
+      <section class="workspace">
+        <div class="section-heading"><span class="step">01</span><div><h2>Choose an image</h2><p>Select the disk image you want to write.</p></div></div>
+        <label class="dropzone" id="dropzone" for="imageFile">
+          <input id="imageFile" type="file" accept=".iso,.img,.bin,.raw,.gz,.xz,.zip,application/octet-stream">
+          <span class="upload-icon">↑</span>
+          <strong id="filePrompt">Drop your image here</strong>
+          <span class="muted">or <span class="accent">browse files</span> on your device</span>
+          <span class="file-types">ISO · IMG · BIN · RAW · other image files</span>
+        </label>
+        <div id="fileInfo" class="file-info hidden">
+          <div class="file-symbol">IMG</div><div class="file-details"><strong id="fileName"></strong><span id="fileMeta"></span></div>
+          <button class="icon-button" id="removeFile" type="button" aria-label="Remove image">×</button>
+        </div>
+      </section>
+      <section class="workspace">
+        <div class="section-heading"><span class="step">02</span><div><h2>Write settings</h2><p>Review the options for your intended flash.</p></div></div>
+        <div class="settings-grid">
+          <label class="field"><span>Target drive</span><select id="target"><option value="">Select a drive on your computer…</option><option value="not-available">Drive selection unavailable in this browser</option></select><small>Web browsers cannot list ordinary block devices.</small></label>
+          <label class="field"><span>Block size</span><select id="blockSize"><option value="1M">1M</option><option value="4M" selected>4M (default)</option><option value="8M">8M</option><option value="16M">16M</option></select><small>Used in the generated flash plan.</small></label>
+          <label class="field"><span>Write option (oflag)</span><select id="oflag"><option value="direct" selected>direct (default)</option><option value="sync">sync</option><option value="direct,sync">direct,sync</option><option value="none">none</option></select><small>Matches common dd-style options.</small></label>
+          <div class="field"><span>Image verification</span><button class="secondary-button" id="hashBtn" type="button">Calculate SHA-256</button><small id="hashStatus">Optional; large files may take a while.</small></div>
+        </div>
+        <div class="hash-result hidden" id="hashResult"><span>SHA-256</span><code id="hashValue"></code><button class="text-button" id="copyHash" type="button">Copy</button></div>
+      </section>
+      <section class="workspace">
+        <div class="section-heading"><span class="step">03</span><div><h2>Review before writing</h2><p>Check the image and settings before you use a local flashing tool.</p></div></div>
+        <div class="summary">
+          <div class="summary-row"><span>Image</span><strong id="summaryImage">No image selected</strong></div>
+          <div class="summary-row"><span>Image size</span><strong id="summarySize">—</strong></div>
+          <div class="summary-row"><span>Block size</span><strong id="summaryBlock">4M</strong></div>
+          <div class="summary-row"><span>Write option</span><strong id="summaryFlag">direct</strong></div>
+        </div>
+        <label class="check-row"><input type="checkbox" id="confirm"><span>I understand that flashing an image can permanently erase data on the selected drive.</span></label>
+        <button class="primary-button" id="planBtn" disabled>Prepare flash plan <span>↗</span></button>
+        <p class="button-help" id="buttonHelp">Choose an image and acknowledge the data-loss warning to continue.</p>
+        <div id="plan" class="plan hidden" aria-live="polite">
+          <div class="plan-head"><span class="success-icon">✓</span><div><strong>Flash plan prepared</strong><p>No drive has been modified.</p></div></div>
+          <label class="field"><span>Plan / command reference</span><textarea id="planText" rows="4" readonly></textarea></label>
+          <div class="plan-actions"><button class="secondary-button" id="copyPlan" type="button">Copy plan</button><button class="secondary-button" id="downloadPlan" type="button">Download plan (.txt)</button></div>
+          <p class="small-warning">Before running any command, verify the target device identifier carefully. A wrong target can destroy data or make a system unbootable.</p>
+        </div>
+      </section>
+      <footer><span>cflash web · Unofficial browser companion</span><a href="https://github.com/Cametendo/cflash-git" target="_blank" rel="noreferrer">Based on the idea of cflash-git ↗</a></footer>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
