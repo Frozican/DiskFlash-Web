@@ -1,5 +1,6 @@
 const $ = (id) => document.getElementById(id);
 const HELPER = "http://127.0.0.1:8765";
+let progressPoll = null;
 let selectedFile = null, sha256 = "", drives = [], connected = false, flashing = false;
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes)) return "Unknown size";
@@ -138,11 +139,27 @@ $("flashBtn").addEventListener("click", async () => {
       xhr.setRequestHeader("X-Block-Size", $("blockSize").value);
       xhr.upload.onprogress = e => {
         if (e.lengthComputable) {
-          const p = Math.min(99, Math.floor(e.loaded / e.total * 100));
+          const p = Math.min(49, Math.floor(e.loaded / e.total * 49));
           $("progressBar").style.width = p + "%"; $("progressPercent").textContent = p + "%";
-          $("progressStatus").textContent = `Sending image: ${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
+          $("progressStatus").textContent = "Sending image to helper: " + formatBytes(e.loaded) + " / " + formatBytes(e.total);
         }
       };
+      progressPoll = setInterval(async () => {
+        try {
+          const r = await fetch(HELPER + "/api/progress", {cache:"no-store"});
+          if (!r.ok) return;
+          const p = await r.json();
+          if (p.stage === "writing" && p.total) {
+            const percent = Math.min(49, Math.floor(p.written / p.total * 49));
+            $("progressBar").style.width = percent + "%"; $("progressPercent").textContent = percent + "%";
+            $("progressStatus").textContent = "Writing: " + formatBytes(p.written) + " / " + formatBytes(p.total) + " · " + formatBytes(p.speed) + "/s · " + (p.eta == null ? "calculating ETA" : Math.ceil(p.eta) + "s left");
+          } else if (p.stage === "verifying" && p.total) {
+            const percent = 50 + Math.floor(p.verified / p.total * 49);
+            $("progressBar").style.width = percent + "%"; $("progressPercent").textContent = percent + "%";
+            $("progressStatus").textContent = "Verifying written data: " + formatBytes(p.verified) + " / " + formatBytes(p.total);
+          }
+        } catch (err) {}
+      }, 500);
       xhr.onload = () => {
         let body; try { body = JSON.parse(xhr.responseText); } catch { body = {error:xhr.responseText || "Invalid helper response"}; }
         if (xhr.status >= 200 && xhr.status < 300) resolve(body); else reject(new Error(body.error || "Write failed"));
@@ -153,11 +170,15 @@ $("flashBtn").addEventListener("click", async () => {
     });
     $("progressBar").style.width = "100%"; $("progressPercent").textContent = "100%";
     $("progressStatus").textContent = "Write completed";
-    showResult(`SUCCESS: wrote ${formatBytes(response.written)} to ${d.id}. Safely eject the disk before unplugging it.`, true);
+    const speed = response.average_bytes_per_second ? " Average throughput: " + formatBytes(response.average_bytes_per_second) + "/s." : "";
+    showResult("SUCCESS: wrote " + formatBytes(response.written) + " to " + d.id + " and verified it with read-back SHA-256." + speed + " Safely eject the disk before unplugging it.", true);
     $("confirm").checked = false;
   } catch (e) {
     $("progressStatus").textContent = "Write failed or interrupted";
     showResult(`ERROR: ${e.message} If writing had started, the target may contain a partial image. Do not assume it is usable.`, false);
-  } finally { flashing = false; updateSummary(); }
+  } finally {
+    if (progressPoll) { clearInterval(progressPoll); progressPoll = null; }
+    flashing = false; updateSummary();
+  }
 });
 updateSummary();
