@@ -144,4 +144,4 @@ This project was inspired by the general disk-flashing workflow of [Cametendo/cf
 
 ## License
 
-See the repository's license file, if present.
+See the repository's license file!
