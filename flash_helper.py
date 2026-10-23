@@ -32,9 +32,10 @@ def list_drives():
                             mounts.extend(x for x in n["mountpoints"] if x)
                         for c in n.get("children") or []: collect(c)
                     collect(d)
+                    system_disk = any(m in ("/", "/boot", "/boot/efi") for m in mounts)
                     drives.append({"id": d["path"], "name": (d.get("model") or "Disk").strip(),
                         "size": int(d.get("size") or 0), "serial": (d.get("serial") or "").strip(),
-                        "bus": d.get("tran") or "unknown", "system": False,
+                        "bus": d.get("tran") or "unknown", "system": system_disk,
                         "mounted": mounts, "readonly": bool(d.get("ro"))})
                 visit(d.get("children") or [])
         visit(data.get("blockdevices", []))
